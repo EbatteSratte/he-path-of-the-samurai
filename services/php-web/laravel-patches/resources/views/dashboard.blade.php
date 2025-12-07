@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="container pb-5">
+<div class="container pb-5 fade-in">
   {{-- верхние карточки --}}
   <div class="row g-3 mb-2">
     <div class="col-6 col-md-3"><div class="border rounded p-2 text-center">
