@@ -25,9 +25,15 @@
       </div>
 
       <div class="table-responsive">
-        <table class="table table-hover align-middle">
+        <table class="table table-hover align-middle" id="astroTable">
           <thead class="table-light">
-            <tr><th>#</th><th>Тело</th><th>Событие</th><th>Когда (UTC)</th><th>Дополнительно</th></tr>
+            <tr>
+              <th style="cursor:pointer" onclick="sortTable(0)"># ↕</th>
+              <th style="cursor:pointer" onclick="sortTable(1)">Тело ↕</th>
+              <th style="cursor:pointer" onclick="sortTable(2)">Событие ↕</th>
+              <th style="cursor:pointer" onclick="sortTable(3)">Когда (UTC) ↕</th>
+              <th style="cursor:pointer" onclick="sortTable(4)">Дополнительно ↕</th>
+            </tr>
           </thead>
           <tbody id="astroBody">
             <tr><td colspan="5" class="text-muted">нет данных</td></tr>
@@ -44,6 +50,44 @@
 </div>
 
 <script>
+  // Функция сортировки таблицы
+  function sortTable(n) {
+    var table, rows, switching, i, x, y, shouldSwitch, dir, switchcount = 0;
+    table = document.getElementById("astroTable");
+    switching = true;
+    dir = "asc";
+    while (switching) {
+      switching = false;
+      rows = table.rows;
+      for (i = 1; i < (rows.length - 1); i++) {
+        shouldSwitch = false;
+        x = rows[i].getElementsByTagName("TD")[n];
+        y = rows[i + 1].getElementsByTagName("TD")[n];
+        if (dir == "asc") {
+          if (x.innerHTML.toLowerCase() > y.innerHTML.toLowerCase()) {
+            shouldSwitch = true;
+            break;
+          }
+        } else if (dir == "desc") {
+          if (x.innerHTML.toLowerCase() < y.innerHTML.toLowerCase()) {
+            shouldSwitch = true;
+            break;
+          }
+        }
+      }
+      if (shouldSwitch) {
+        rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
+        switching = true;
+        switchcount ++;
+      } else {
+        if (switchcount == 0 && dir == "asc") {
+          dir = "desc";
+          switching = true;
+        }
+      }
+    }
+  }
+
   document.addEventListener('DOMContentLoaded', () => {
     const form = document.getElementById('astroForm');
     const body = document.getElementById('astroBody');

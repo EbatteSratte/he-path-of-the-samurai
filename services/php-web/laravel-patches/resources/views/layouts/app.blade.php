@@ -40,7 +40,7 @@
       color: #adb5bd !important;
     }
     .text-dark {
-      color: #fff !important;
+      color: #212529 !important;
     }
     .bg-light {
       background-color: rgba(255, 255, 255, 0.1) !important;
@@ -57,11 +57,11 @@
       box-shadow: 0 0 0 0.25rem rgba(0, 123, 255, 0.25);
     }
     .table {
-      color: #e0e0e0;
+      color: #212529;
     }
     .table-hover tbody tr:hover {
-      color: #fff;
-      background-color: rgba(255,255,255,0.1);
+      color: #212529;
+      background-color: rgba(255,255,255,0.9);
     }
     
     #map{height:340px}
