@@ -3,20 +3,20 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Support\JwstHelper;
 
-class DashboardController extends Controller
+class IssController extends Controller
 {
     private function base(): string { return getenv('RUST_BASE') ?: 'http://rust_iss:3000'; }
 
-    private function getJson(string $url, array $qs = []): array {
-        if ($qs) $url .= (str_contains($url,'?')?'&':'?') . http_build_query($qs);
+    private function getJson(string $url): array {
         $raw = @file_get_contents($url);
         return $raw ? (json_decode($raw, true) ?: []) : [];
     }
 
     public function index()
     {
-        return view('dashboard');
+        $b = $this->base();
+        $iss = $this->getJson($b.'/last');
+        return view('iss', ['iss' => $iss]);
     }
 }

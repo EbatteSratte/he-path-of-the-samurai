@@ -20,7 +20,17 @@
 <nav class="navbar navbar-expand-lg bg-body-tertiary mb-3">
   <div class="container">
     <a class="navbar-brand" href="/dashboard">Dashboard</a>
-    <a class="nav-link" href="/osdr">OSDR</a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarNav">
+      <ul class="navbar-nav">
+        <li class="nav-item"><a class="nav-link" href="/iss">МКС</a></li>
+        <li class="nav-item"><a class="nav-link" href="/jwst">JWST</a></li>
+        <li class="nav-item"><a class="nav-link" href="/astro">События</a></li>
+        <li class="nav-item"><a class="nav-link" href="/osdr">OSDR</a></li>
+      </ul>
+    </div>
   </div>
 </nav>
 @yield('content')
