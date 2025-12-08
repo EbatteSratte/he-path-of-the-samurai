@@ -3,15 +3,24 @@ use std::{collections::HashMap, time::Duration};
 use axum::{
     extract::{Path, Query, State},
     http::StatusCode,
+    middleware,
     routing::get,
-    Json, Router,
+    Extension, Json, Router,
 };
 use chrono::{DateTime, NaiveDateTime, TimeZone, Utc};
+use redis::{aio::ConnectionManager, Client as RedisClient};
 use serde::Serialize;
 use serde_json::Value;
 use sqlx::{postgres::PgPoolOptions, PgPool, Row};
 use tracing::{error, info};
 use tracing_subscriber::{EnvFilter, FmtSubscriber};
+use validator::Validate;
+
+mod rate_limit;
+mod validation;
+
+use rate_limit::{rate_limit_middleware, RateLimiter};
+use validation::*;
 
 #[derive(Serialize)]
 struct Health { status: &'static str, now: DateTime<Utc> }
@@ -40,6 +49,7 @@ async fn main() -> anyhow::Result<()> {
     dotenvy::dotenv().ok();
 
     let db_url = std::env::var("DATABASE_URL").expect("DATABASE_URL is required");
+    let redis_url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://redis:6379".to_string());
 
     let nasa_url = std::env::var("NASA_API_URL")
         .unwrap_or_else(|_| "https://visualization.osdr.nasa.gov/biodata/api/v2/datasets/?format=json".to_string());
@@ -57,6 +67,11 @@ async fn main() -> anyhow::Result<()> {
 
     let pool = PgPoolOptions::new().max_connections(5).connect(&db_url).await?;
     init_db(&pool).await?;
+
+    // Connect to Redis
+    let redis_client = RedisClient::open(redis_url)?;
+    let redis_conn = ConnectionManager::new(redis_client).await?;
+    let rate_limiter = RateLimiter::new(redis_conn);
 
     let state = AppState {
         pool: pool.clone(),
@@ -142,6 +157,8 @@ async fn main() -> anyhow::Result<()> {
         .route("/space/:src/latest", get(space_latest))
         .route("/space/refresh", get(space_refresh))
         .route("/space/summary", get(space_summary))
+        .layer(middleware::from_fn(rate_limit_middleware))
+        .layer(Extension(rate_limiter))
         .with_state(state);
 
     let listener = tokio::net::TcpListener::bind(("0.0.0.0", 3000)).await?;
@@ -308,10 +325,18 @@ async fn osdr_sync(State(st): State<AppState>)
     Ok(Json(serde_json::json!({ "written": written })))
 }
 
-async fn osdr_list(State(st): State<AppState>)
--> Result<Json<Value>, (StatusCode, String)> {
-    let limit =  std::env::var("OSDR_LIST_LIMIT").ok()
-        .and_then(|s| s.parse::<i64>().ok()).unwrap_or(20);
+async fn osdr_list(
+    State(st): State<AppState>,
+    Query(params): Query<OsdrQueryParams>,
+) -> Result<Json<Value>, (StatusCode, String)> {
+    // Validate query parameters
+    params.validate()
+        .map_err(|e| {
+            let errors = validation_errors_to_vec(e);
+            (StatusCode::BAD_REQUEST, serde_json::to_string(&errors).unwrap_or_default())
+        })?;
+
+    let limit = params.limit.unwrap_or(20);
 
     let rows = sqlx::query(
         "SELECT id, dataset_id, title, status, updated_at, inserted_at, raw

@@ -5,8 +5,25 @@ volumes:
   pgdata:
   appdata:
   csvdata:
+  redisdata:
 
 services:
+  redis:
+    image: redis:7-alpine
+    container_name: iss_redis
+    command: redis-server --appendonly yes
+    volumes:
+      - redisdata:/data
+    networks:
+      - backend
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
   db:
     image: postgres:16
     container_name: iss_db
@@ -33,12 +50,15 @@ services:
     container_name: rust_iss
     environment:
       DATABASE_URL: ${DATABASE_URL:-postgres://monouser:monopass@db:5432/monolith}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379}
       NASA_API_URL: ${NASA_API_URL:-}
       NASA_API_KEY: ${NASA_API_KEY:-}
       FETCH_EVERY_SECONDS: ${FETCH_EVERY_SECONDS:-600}
       WHERE_ISS_URL: ${WHERE_ISS_URL:-https://api.wheretheiss.at/v1/satellites/25544}
     depends_on:
       db:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     networks:
       - backend
@@ -50,6 +70,8 @@ services:
       context: ./services/php-web
     container_name: php_web
     environment:
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
       JWST_HOST: https://api.jwstapi.com
       JWST_API_KEY: baa96cdf-4a82-45f1-b986-d10a96826442
       JWST_EMAIL: burnfeniks@yandex.ru
@@ -67,6 +89,8 @@ services:
       DB_PASSWORD: monopass
     depends_on:
       db:
+        condition: service_healthy
+      redis:
         condition: service_healthy
       rust_iss:
         condition: service_started
