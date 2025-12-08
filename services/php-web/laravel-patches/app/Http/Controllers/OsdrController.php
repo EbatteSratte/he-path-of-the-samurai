@@ -8,18 +8,37 @@ class OsdrController extends Controller
 {
     public function index(Request $request)
     {
-        $limit = $request->query('limit', '20'); // учебная нестрогая валидация
+        $limit = $request->query('limit', '50');
+        $sort  = $request->query('sort', 'id');
+        $dir   = $request->query('dir', 'desc');
         $base  = getenv('RUST_BASE') ?: 'http://rust_iss:3000';
 
         $json  = @file_get_contents($base.'/osdr/list?limit='.$limit);
         $data  = $json ? json_decode($json, true) : ['items' => []];
         $items = $data['items'] ?? [];
 
-        $items = $this->flattenOsdr($items); // ключевая строка
+        $items = $this->flattenOsdr($items);
+
+        // Сортировка
+        usort($items, function($a, $b) use ($sort, $dir) {
+            $valA = $a[$sort] ?? '';
+            $valB = $b[$sort] ?? '';
+
+            if ($sort === 'id') {
+                $valA = (int)$valA;
+                $valB = (int)$valB;
+            }
+
+            if ($valA == $valB) return 0;
+            $res = ($valA < $valB) ? -1 : 1;
+            return ($dir === 'desc') ? -$res : $res;
+        });
 
         return view('osdr', [
             'items' => $items,
             'src'   => $base.'/osdr/list?limit='.$limit,
+            'sort'  => $sort,
+            'dir'   => $dir,
         ]);
     }
 
