@@ -8,7 +8,7 @@ class OsdrController extends Controller
 {
     public function index(Request $request)
     {
-        $limit = $request->query('limit', '50');
+        $limit = $request->query('limit', '500');
         $sort  = $request->query('sort', 'id');
         $dir   = $request->query('dir', 'desc');
         $base  = getenv('RUST_BASE') ?: 'http://rust_iss:3000';
